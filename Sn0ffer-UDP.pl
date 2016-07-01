@@ -1,8 +1,12 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
+
+# Project website:: http://snoffer.tad0.org
+# Licence:: CC-NC-BY-SA
 
 # UDP sniffer for snoffer
-# 0.5 - choose interface
-# 0.4 - 24/04/2012 - tAd tad0.org
+# v0.5.1 - 01/07/2016 - some code cleaning and comments
+# v0.5 - 21/08/2012 - choose interface
+# v0.4 - 24/04/2012 - tAd tad0.org
 
 use strict;
 use warnings;
@@ -45,7 +49,6 @@ if (exists($args->{'h'})
 my $interface = $args->{'i'};
 
 # Filtering, Device, ...
-# This one use macbook wifi interface (en1)
 Net::PcapUtils::loop(\&process_pkt, FILTER => 'udp', DEV => $interface, PROMISC => 1,);
 
 sub process_pkt {
@@ -53,27 +56,27 @@ sub process_pkt {
   my $eth=NetPacket::Ethernet->decode($pkt);
   if($eth->{type} == 2048){
     my $ip=NetPacket::IP->decode($eth->{data});
-    ## UDP
     if($ip->{proto} == 17){
       my $udp=NetPacket::UDP->decode($ip->{data});
-      	#print "$i - $ip->{src_ip}($udp->{src_port}) -> $ip->{dest_ip}($udp->{dest_port}) - ";
-	#print "$ip->{src_ip}($udp->{src_port}) -> $ip->{dest_ip}($udp->{dest_port}) - ";
 	if($udp->{dest_port} < 1024){
+	# Print data informations into terminal
 	print "[UDP] $ip->{src_ip}($udp->{src_port}) -> $ip->{dest_ip}($udp->{dest_port}) - ";
 	$i++;
-                $freq=(227.5+($udp->{dest_port})*0.0634);
+	$freq=(227.5+($udp->{dest_port})*0.0634);
 
-	## Talk to PD
+	# Open a socket to PureData
 	my $Socket=new IO::Socket::INET->new(
-        PeerPort=>4442,
-        Proto=>'tcp',
+	PeerPort=>4442,
+	Proto=>'tcp',
 	PeerAddr=>'127.0.0.1',
 	LocalAddr => '127.0.0.1',
-        ) or die "Can't bind : $@\n";
+	) or die "Can't bind : $@\n Is PureData running? ... \n";
 
+	# Send data to PureData
 	print "$freq Hz \n";
 	print $Socket $freq;
 	print $Socket ';';
+	close($Socket);
       }
     }
   }
